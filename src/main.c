@@ -15,10 +15,34 @@
  * limitations under the License.
  */
 
+#include <time.h>
+
 #include "mgos_ili9341.h"
-#include "fonts/FreeSerifBold9pt7b.h"
+#include "fonts/FreeSerif9pt7b.h"
+#include "fonts/FreeSerif12pt7b.h"
+#include "fonts/FreeSerif18pt7b.h"
+#include "fonts/FreeSerif24pt7b.h"
 
 GFXfont *get_font(int n) {
-  (void) n;
-  return &FreeSerifBold9pt7b;
+  switch (n) {
+    case 0:
+      return &FreeSerif9pt7b;
+    case 1:
+      return &FreeSerif12pt7b;
+    case 2:
+      return &FreeSerif18pt7b;
+    case 3:
+      return &FreeSerif24pt7b;
+  }
+  return NULL;
+}
+
+const char *format_time(const char *fmt) {
+  static char buf[32];
+  time_t now = time(NULL);
+  struct tm tm;
+  if (now < 1500000000) return NULL;
+  if (localtime_r(&now, &tm) == NULL) return NULL;
+  strftime(buf, sizeof(buf), fmt, &tm);
+  return buf;
 }
