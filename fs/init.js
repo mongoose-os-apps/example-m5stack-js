@@ -13,6 +13,8 @@ let BTN1 = 39, BTN2 = 38, BTN3 = 37;
 let LCD_BACKLIGHT = 32;
 
 let devID = Cfg.get('device.id');
+let greeting = '';
+let btnc = [-1, 0, 0, 0];
 let netStatus = null;
 let cloudName = null;
 let azureConnected = false;
@@ -26,6 +28,12 @@ if (Cfg.get('mqtt.enable') && Cfg.get('mqtt.server').indexOf('amazon')) {
     if (ev === Azure.EV_CONNECT) {
       azureConnected = true;
     } else if (ev === Azure.EV_C2D) {
+      let c2d = Azure.getC2DArg(evdata);
+      print('C2D message:', c2d.props, c2d.body);
+      greeting = '';
+      printGreeting();
+      greeting = c2d.body;
+      printGreeting();
     } else if (ev === Azure.EV_CLOSE) {
       azureConnected = false;
     }
@@ -68,9 +76,7 @@ ILI9341.setFont(fonts[1]);
 ILI9341.setFgColor565(ILI9341.WHITE);
 printCentered(160, line(0), devID);
 
-let greeting = '';
 let formatTime = ffi('char *format_time(char *)');
-let btnc = [-1, 0, 0, 0];
 
 function printNetStatus() {
   if (!netStatus) netStatus = 'not configured';
