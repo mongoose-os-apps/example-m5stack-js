@@ -50,3 +50,4 @@ libs:
   - origin: https://github.com/mongoose-os-libs/wifi
 
 manifest_version: 2017-09-19
+platforms: [ esp32 ]
