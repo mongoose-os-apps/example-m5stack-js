@@ -6,6 +6,7 @@ load('api_ili9341_spi.js');
 load('api_mqtt.js');
 load('api_net.js');
 load('api_rpc.js');
+load('api_shadow.js');
 load('api_sys.js');
 load('api_timer.js');
 
@@ -40,6 +41,8 @@ if (Cfg.get('mqtt.enable') && Cfg.get('mqtt.server').indexOf('amazon')) {
   }, null);
 } else if (Cfg.get('azure.enable')) {
   cloudName = 'GCP';
+} else if (Cfg.get('dash.enable')) {
+  cloudName = 'Mongoose';
 }
 
 MQTT.setEventHandler(function(conn, ev, edata) {
@@ -159,6 +162,9 @@ function reportBtnPress(n) {
   } else {
     MQTT.pub(devID + '/messages', msg);
   }
+  let upd = {};
+  upd["btn" + btns] = btnc[n];
+  Shadow.update(0, upd);
   printBtnStatus();
 }
 
@@ -172,6 +178,22 @@ RPC.addHandler('M5.SetGreeting', function(args) {
   printGreeting();
   greeting = args.greeting;
   printGreeting();
+});
+
+Shadow.addHandler(function(ev, obj) {
+  print(ev, JSON.stringify(obj));
+  if (ev === 'CONNECTED') {
+    // Nothing. A GET will be delivered shortly.
+  } else if (ev === 'GET_ACCEPTED' && obj.reported !== undefined ) {
+    btnc[1] = obj.reported.btn1 || 0;
+    btnc[2] = obj.reported.btn2 || 0;
+    btnc[3] = obj.reported.btn3 || 0;
+    if (obj.desired !== undefined && obj.desired.greeting !== undefined) {
+      greeting = obj.desired.greeting;
+    }
+  } else if (ev === 'UPDATE_DELTA') {
+    if (obj.greeting !== undefined) greeting = obj.greeting;
+  }
 });
 
 printStatus();
