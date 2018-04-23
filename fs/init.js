@@ -9,6 +9,7 @@ load('api_rpc.js');
 load('api_shadow.js');
 load('api_sys.js');
 load('api_timer.js');
+load('api_watson.js');
 
 let BTN1 = 39, BTN2 = 38, BTN3 = 37;
 let LCD_BACKLIGHT = 32;
@@ -18,8 +19,7 @@ let greeting = '';
 let btnc = [-1, 0, 0, 0];
 let netStatus = null;
 let cloudName = null;
-let azureConnected = false;
-let mqttConnected = false;
+let cloudConnected = false;
 
 if (Cfg.get('mqtt.enable') && Cfg.get('mqtt.server').indexOf('amazon')) {
   cloudName = 'Amazon';
@@ -27,7 +27,7 @@ if (Cfg.get('mqtt.enable') && Cfg.get('mqtt.server').indexOf('amazon')) {
   cloudName = 'Azure';
   Event.addGroupHandler(Azure.EVENT_GRP, function(ev, evdata, arg) {
     if (ev === Azure.EV_CONNECT) {
-      azureConnected = true;
+      cloudConnected = true;
     } else if (ev === Azure.EV_C2D) {
       let c2d = Azure.getC2DArg(evdata);
       print('C2D message:', c2d.props, c2d.body);
@@ -36,20 +36,32 @@ if (Cfg.get('mqtt.enable') && Cfg.get('mqtt.server').indexOf('amazon')) {
       greeting = c2d.body;
       printGreeting();
     } else if (ev === Azure.EV_CLOSE) {
-      azureConnected = false;
+      cloudConnected = false;
     }
   }, null);
-} else if (Cfg.get('azure.enable')) {
+} else if (Cfg.get('gcp.enable')) {
   cloudName = 'GCP';
+} else if (Cfg.get('watson.enable')) {
+  cloudName = 'Watson';
+  Event.addGroupHandler(Watson.EVENT_GRP, function(ev, evdata, arg) {
+    if (ev === Watson.EV_CONNECT) {
+      cloudConnected = true;
+      watsonReportBtnStatus();
+    } else if (ev === Watson.EV_CLOSE) {
+      cloudConnected = false;
+    }
+  }, null);
 } else if (Cfg.get('dash.enable')) {
   cloudName = 'Mongoose';
 }
 
 MQTT.setEventHandler(function(conn, ev, edata) {
-  if (ev === MQTT.EV_CONNACK) {
-    mqttConnected = true;
-  } else if (ev === MQTT.EV_CLOSE) {
-    mqttConnected = false;
+  if (cloudName && cloudName !== 'Azure' && cloudName !== Watson) {
+    if (ev === MQTT.EV_CONNACK) {
+      cloudConnected = true;
+    } else if (ev === MQTT.EV_CLOSE) {
+      cloudConnected = false;
+    }
   }
 }, null);
 
@@ -93,12 +105,6 @@ function printCloudStatus() {
   ILI9341.setFgColor565(ILI9341.WHITE);
   let cs;
   if (cloudName) {
-    let cloudConnected = false;
-    if (cloudName === 'Azure') {
-      cloudConnected = azureConnected;
-    } else {
-      cloudConnected = mqttConnected;
-    }
     cs = cloudName + ', ' + (cloudConnected ? 'connected' : 'not connected');
   } else {
     cs = 'not configured';
@@ -152,6 +158,12 @@ Event.addGroupHandler(Net.EVENT_GRP, function(ev, evdata, arg) {
   printNetStatus();
 }, null);
 
+function watsonReportBtnStatus() {
+  // Make sure BTN1 is always reported first, to make the QuickStart graph deterministic.
+  Watson.sendEventJSON('btnStatus', {d:{btn1: btnc[1]}});
+  Watson.sendEventJSON('btnStatus', {d:{btn2: btnc[2], btn3: btnc[3]}});
+}
+
 function reportBtnPress(n) {
   btnc[n] = btnc[n] + 1;
 
@@ -159,6 +171,8 @@ function reportBtnPress(n) {
   let msg = JSON.stringify({btn: n, cnt: btnc[n]});
   if (cloudName === 'Azure') {
     Azure.sendD2CMsg('btn=' + btns, msg);
+  } else if (cloudName === 'Watson') {
+    watsonReportBtnStatus();
   } else {
     MQTT.pub(devID + '/messages', msg);
   }

@@ -47,6 +47,7 @@ libs:
   - origin: https://github.com/mongoose-os-libs/rpc-uart
   - origin: https://github.com/mongoose-os-libs/spi
   - origin: https://github.com/mongoose-os-libs/sntp
+  - origin: https://github.com/mongoose-os-libs/watson
   - origin: https://github.com/mongoose-os-libs/wifi
 
 manifest_version: 2017-09-19
