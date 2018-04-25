@@ -21,9 +21,7 @@ let netStatus = null;
 let cloudName = null;
 let cloudConnected = false;
 
-if (Cfg.get('mqtt.enable') && Cfg.get('mqtt.server').indexOf('amazon')) {
-  cloudName = 'Amazon';
-} else if (Cfg.get('azure.enable')) {
+if (Cfg.get('azure.enable')) {
   cloudName = 'Azure';
   Event.addGroupHandler(Azure.EVENT_GRP, function(ev, evdata, arg) {
     if (ev === Azure.EV_CONNECT) {
@@ -53,6 +51,12 @@ if (Cfg.get('mqtt.enable') && Cfg.get('mqtt.server').indexOf('amazon')) {
   }, null);
 } else if (Cfg.get('dash.enable')) {
   cloudName = 'Mongoose';
+} else if (Cfg.get('mqtt.enable')) {
+  if (Cfg.get('mqtt.server').indexOf('amazonaws') > 0) {
+    cloudName = 'Amazon';
+  } else {
+    cloudName = 'MQTT';
+  }
 }
 
 MQTT.setEventHandler(function(conn, ev, edata) {
@@ -186,7 +190,9 @@ GPIO.set_button_handler(BTN1, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 20, function() { 
 GPIO.set_button_handler(BTN2, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 20, function() { reportBtnPress(2) }, null);
 GPIO.set_button_handler(BTN3, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 20, function() { reportBtnPress(3) }, null);
 RPC.addHandler('M5.SetGreeting', function(args) {
-  if (args.greeting === undefined) return;
+  if (args.greeting === undefined) {
+    return {"error": 400, "message": "greeting not specified"};
+  }
   ILI9341.setFont(fonts[1]);
   greeting = '';
   printGreeting();
