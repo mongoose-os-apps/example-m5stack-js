@@ -71,14 +71,9 @@ MQTT.setEventHandler(function(conn, ev, edata) {
 
 let getFont = ffi('void* get_font(int)');
 let fonts = [getFont(0), getFont(1), getFont(2), getFont(3)];
-function line(n) {
-  let res = n * ILI9341.getMaxFontHeight();
-  if (res < 0) res = res + 240;
-  return res;
-}
 function clearLine(n) {
   ILI9341.setFgColor565(ILI9341.BLACK);
-  ILI9341.fillRect(0, line(n), 319, ILI9341.getMaxFontHeight());
+  ILI9341.fillRect(0, ILI9341.line(n), ILI9341.getScreenWidth(), ILI9341.getMaxFontHeight());
   ILI9341.setFgColor565(ILI9341.WHITE);
 }
 
@@ -86,14 +81,21 @@ function printCentered(xc, y, text) {
   ILI9341.print(xc - ILI9341.getStringWidth(text) / 2, y, text);
 }
 
+// Display orientation settings.
+// See https://github.com/mongoose-os-libs/ili9341-spi#orientations for details.
+let M5STACK_LANDSCAPE = 0x0;        // Buttons at the bottom, 320x240
+let M5STACK_PORTRAIT = 0xa0;        // Buttons on the left, 240x320
+let M5STACK_LANDSCAPE_FLIP = 0xd0;  // Buttons at the top, 320x240
+let M5STACK_PORTRAIT_FLIP = 0x60;   // Buttons on the right, 240x320
+
 GPIO.set_mode(LCD_BACKLIGHT, GPIO.MODE_OUTPUT);
 GPIO.write(LCD_BACKLIGHT, 1);
-ILI9341.setRotation(ILI9341.PORTRAIT_FLIP);
+ILI9341.setOrientation(M5STACK_LANDSCAPE, 320, 240);
 ILI9341.setBgColor(0, 0, 0);
 ILI9341.fillScreen();
 ILI9341.setFont(fonts[1]);
 ILI9341.setFgColor565(ILI9341.WHITE);
-printCentered(160, line(0), devID);
+printCentered(ILI9341.getScreenWidth() / 2, ILI9341.line(0), devID);
 
 let formatTime = ffi('char *format_time(char *)');
 
@@ -101,7 +103,7 @@ function printNetStatus() {
   if (!netStatus) netStatus = 'not configured';
   ILI9341.setFont(fonts[1]);
   ILI9341.setFgColor565(ILI9341.WHITE);
-  ILI9341.print(5, line(1), 'WiFi: ' + netStatus + '         ');
+  ILI9341.print(5, ILI9341.line(1), 'WiFi: ' + netStatus + '         ');
 }
 
 function printCloudStatus() {
@@ -113,21 +115,21 @@ function printCloudStatus() {
   } else {
     cs = 'not configured';
   }
-  ILI9341.print(5, line(2), 'Cloud: ' + cs + '         ');
+  ILI9341.print(5, ILI9341.line(2), 'Cloud: ' + cs + '         ');
 }
 
 function printTime() {
   ILI9341.setFont(fonts[1]);
   ILI9341.setFgColor565(ILI9341.WHITE);
   let ts = formatTime('%H:%M:%S');
-  ILI9341.print(5, line(3), 'Time: ' + (ts ? ts : 'not set') + '   ');
+  ILI9341.print(5, ILI9341.line(3), 'Time: ' + (ts ? ts : 'not set') + '   ');
 }
 
 function printGreeting() {
   ILI9341.setFont(fonts[1]);
   ILI9341.setFgColor565(ILI9341.WHITE);
   if (greeting) {
-    printCentered(160, line(5), greeting);
+    printCentered(160, ILI9341.line(5), greeting);
   } else {
     clearLine(5);
   }
@@ -136,7 +138,7 @@ function printGreeting() {
 function printBtnStatus() {
   ILI9341.setFont(fonts[2]);
   ILI9341.setFgColor565(ILI9341.WHITE);
-  let y = line(-1);
+  let y = ILI9341.line(-1);
   printCentered(65, y, JSON.stringify(btnc[1]))
   printCentered(160, y, JSON.stringify(btnc[2]))
   printCentered(255, y, JSON.stringify(btnc[3]))
