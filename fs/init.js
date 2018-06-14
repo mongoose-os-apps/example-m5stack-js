@@ -60,7 +60,7 @@ if (Cfg.get('azure.enable')) {
 }
 
 MQTT.setEventHandler(function(conn, ev, edata) {
-  if (cloudName && cloudName !== 'Azure' && cloudName !== Watson) {
+  if (cloudName && cloudName !== 'Azure' && cloudName !== 'Watson') {
     if (ev === MQTT.EV_CONNACK) {
       cloudConnected = true;
     } else if (ev === MQTT.EV_CLOSE) {
